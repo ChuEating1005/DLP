@@ -47,3 +47,19 @@ Thumbs.db
 
 # Submission zips
 *.zip
+
+# ===== Lab2 specific =====
+
+# Datasets
+**/oxford-iiit-pet/
+**/kaggle_data/
+**/kaggle_data_resnet/
+
+# Model checkpoints
+**/saved_models/
+
+# Submissions
+submission.csv
+
+# Wandb
+**/wandb/
