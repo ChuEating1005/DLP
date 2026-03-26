@@ -6,8 +6,8 @@ Instructors: Prof. Wen-Hsiao Peng, Prof. Yong-Sheng Chen, Prof. Ping-Chun Hsieh
 
 ## Labs
 
-| Lab | Topic | Description |
-|-----|-------|-------------|
+|  Lab  | Topic | Description |
+|-------|-------|-------------|
 | Lab 0 | PyTorch Warm-Up | Introduction to PyTorch basics |
 | Lab 1 | Back-Propagation | Neural network with forward pass and backpropagation from scratch |
 | Lab 2 | Binary Semantic Segmentation | Convolutional networks for segmentation |
