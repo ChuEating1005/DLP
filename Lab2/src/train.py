@@ -46,8 +46,8 @@ def parse_args():
     parser.add_argument(
         "--image_size",
         type=int,
-        default=256,
-        help="Resize dimension for images and masks",
+        default=None,
+        help="Resize dimension (default: 260 for unet, 256 for resnet34_unet)",
     )
     parser.add_argument(
         "--save_dir",
@@ -189,6 +189,8 @@ def tune_threshold(model, dataloader, device, use_tta=False):
 
 def main():
     args = parse_args()
+    if args.image_size is None:
+        args.image_size = 260 if args.model == "unet" else 256
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs(args.save_dir, exist_ok=True)
 

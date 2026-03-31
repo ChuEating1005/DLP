@@ -23,7 +23,12 @@ def parse_args():
         default=None,
         help="Path to dataset root (default: auto-detect)",
     )
-    parser.add_argument("--image_size", type=int, default=512)
+    parser.add_argument(
+        "--image_size",
+        type=int,
+        default=None,
+        help="Resize dimension (default: 260 for unet, 256 for resnet34_unet)",
+    )
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument(
@@ -64,6 +69,8 @@ def evaluate(model, dataloader, device, use_tta=False):
 
 def main():
     args = parse_args()
+    if args.image_size is None:
+        args.image_size = 260 if args.model == "unet" else 256
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if args.model == "unet":
