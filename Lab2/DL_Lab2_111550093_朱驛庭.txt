@@ -1,0 +1,23 @@
+DL Lab2: Binary Semantic Segmentation
+Student: 111550093 朱驛庭
+
+[Implementation Highlights]
+UNet: Faithful to the original 2015 paper. All 3x3 convolutions use valid (no-padding) mode, no BatchNorm, bias enabled. Skip connections use center-cropping to match encoder features to smaller decoder features. Mirror padding of 92px/side is applied to input so output matches target resolution (260x260).
+
+ResNet34_UNet: ResNet34 encoder follows the original paper with padding and BatchNorm. UNet decoder uses ConvTranspose2d upsampling with padded convolutions and BatchNorm per the reference diagram. Final bilinear interpolation restores original resolution (256x256).
+
+Both models implemented from scratch with Kaiming init.
+
+[Data Preprocessing]
+Trimaps to binary masks: 1->foreground(1), 2,3->background(0). Augmentations: random H/V flips, affine (±15° rotation, 5% translation, 0.9-1.1 scale), color jitter. ImageNet normalization. torchvision.transforms.v2 with tv_tensors.Mask ensures spatial transforms apply jointly to images and masks.
+
+[Training Strategy]
+AdamW optimizer (lr=1e-3, weight_decay=1e-2). Loss: BCEWithLogitsLoss + soft Dice loss. Schedulers tested: OneCycleLR, CosineAnnealing, ReduceLROnPlateau. Early stopping (patience=30). Batch size=32. 4x TTA (original + h-flip + v-flip + hv-flip) for validation. Post-training threshold tuning on validation set.
+
+[Key Observations]
+OneCycleLR converged fastest with competitive Dice scores. BCE+Dice loss provides stable gradients while directly optimizing the evaluation metric. TTA improved Dice by ~1-2%. Mirror padding in UNet preserved boundary details effectively.
+
+[UNet vs ResNet34_UNet]
+UNet's valid convolutions require careful input sizing but produce clean boundaries. ResNet34_UNet benefits from deeper residual features and faster convergence. ResNet34_UNet generally achieves higher Dice scores with less training.
+
+AI tools (GitHub Copilot) assisted with code implementation.
