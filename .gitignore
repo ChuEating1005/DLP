@@ -63,3 +63,19 @@ submission.csv
 
 # Wandb
 **/wandb/
+
+# ===== Lab3 specific =====
+**/lab3_dataset/
+**/cat_face/
+**/mask64/
+
+# Checkpoints
+**/transformer_checkpoints/
+**/checkpoints/*.pt
+Lab3/models/VQGAN/checkpoints/
+Lab3/models/Transformer/checkpoints/
+
+# Inference outputs
+Lab3/test_results/
+Lab3/mask_scheduling/
+Lab3/imga/
