@@ -79,3 +79,6 @@ Lab3/models/Transformer/checkpoints/
 Lab3/test_results/
 Lab3/mask_scheduling/
 Lab3/imga/
+
+# ===== Lab4 specific =====
+Lab4/dataset/
