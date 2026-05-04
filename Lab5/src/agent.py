@@ -8,6 +8,7 @@ The class name `DQNAgent` is fixed by the spec.
 """
 from __future__ import annotations
 
+from collections import deque
 import os
 import random
 import time
@@ -20,7 +21,7 @@ import torch.nn as nn
 import torch.optim as optim
 import wandb
 
-from .buffers import make_replay_buffer
+from .buffers import PrioritizedReplayBuffer, make_replay_buffer
 from .networks import DQN
 from .preprocessor import Preprocessor
 from .utils import (
@@ -75,8 +76,9 @@ class DQNAgent:
         self.memory = make_replay_buffer(
             args.replay_buffer_type,
             capacity=args.memory_size,
-            alpha=args.prioritized_alpha,
-            beta=args.prioritized_beta,
+            alpha=args.per_alpha,
+            beta=args.per_beta,
+            beta_increment=args.per_beta_increment,
         )
 
         self.batch_size = args.batch_size
@@ -100,6 +102,7 @@ class DQNAgent:
 
         self.use_double_dqn = args.double_dqn
         self.n_step = args.n_step
+        self.n_step_buffer = deque(maxlen=self.n_step)
 
         self.env_count = 0
         self.train_count = 0
@@ -112,6 +115,35 @@ class DQNAgent:
         self.eval_seed = args.eval_seed
         self.early_stop_reward = args.early_stop_reward
         self.early_stop_patience = args.early_stop_patience
+
+    # ------------------------------------------------------------------
+    # Multi-step return helper functions
+    # ------------------------------------------------------------------
+    def _compute_n_step(self):
+        s0, a0, _, _, _ = self.n_step_buffer[0]
+        _, _, _, s_last, done_last = self.n_step_buffer[-1]
+        r_n = 0.0
+        s_n, done_n = s_last, done_last
+        for k, (_, _, r, s_next, done) in enumerate(self.n_step_buffer):
+            r_n += (self.gamma ** k) * r
+            s_n, done_n = s_next, done
+            if done:
+                break
+        return s0, a0, r_n, s_n, done_n
+
+    def store_transition(self, s, a, r, s_next, done):
+        self.n_step_buffer.append((s, a, r, s_next, bool(done)))
+        if len(self.n_step_buffer) < self.n_step:
+            return
+        s0, a0, r_n, s_n, done_n = self._compute_n_step()
+        self.memory.add((s0, a0, r_n, s_n, done_n))
+
+    def on_episode_end(self):
+        while len(self.n_step_buffer) > 0:
+            s0, a0, r_n, s_n, done_n = self._compute_n_step()
+            self.memory.add((s0, a0, r_n, s_n, done_n))
+            self.n_step_buffer.popleft()
+        self.n_step_buffer.clear()
 
     # ------------------------------------------------------------------
     # Action selection
@@ -143,12 +175,8 @@ class DQNAgent:
 
                 next_state = self.preprocessor.step(next_obs)
 
-                ########## YOUR CODE HERE (for Task 3: n-step return) ##########
-                # TODO: buffer last n transitions, accumulate discounted reward,
-                #       only push the n-step transition into self.memory.
-                #       For now (Task 1/2): push the 1-step transition directly.
-                self.memory.add((state, action, float(reward), next_state, bool(done)))
-                ########## END OF YOUR CODE (for Task 3) ##########
+                # Store transition and handle n-step return logic
+                self.store_transition(state, action, reward, next_state, done)
 
                 # Decay epsilon after every env step
                 self.epsilon = self._epsilon_at_step(self.env_count + 1)
@@ -173,6 +201,10 @@ class DQNAgent:
                         "rollout/episode_step": step_count,
                         "rollout/epsilon": self.epsilon,
                     })
+
+            # Flush remaining n-step transitions and clear deque to prevent
+            # cross-episode contamination of bootstrapped returns.
+            self.on_episode_end()
 
             print(f"[Episode] Ep:{ep} TotalReward:{total_reward:.1f} EnvSteps:{self.env_count} "
                   f"UC:{self.train_count} Eps:{self.epsilon:.4f}")
@@ -279,13 +311,13 @@ class DQNAgent:
 
         self.train_count += 1
 
-        states, actions, rewards, next_states, dones, indices, weights = \
+        states, actions, returns, next_states, dones, indices, weights = \
             self.memory.sample(self.batch_size)
 
         states = to_tensor(states, self.device)
         next_states = to_tensor(next_states, self.device)
         actions = to_tensor(actions, self.device, dtype=torch.long)
-        rewards = to_tensor(rewards, self.device)
+        returns = to_tensor(returns, self.device) # already n-step bootstrapped returns if n_step > 1
         dones = to_tensor(dones, self.device)
         weights = to_tensor(weights, self.device)
 
@@ -293,21 +325,14 @@ class DQNAgent:
 
         with torch.no_grad():
             if self.use_double_dqn:
-                ########## YOUR CODE HERE (for Task 3: Double DQN) ##########
-                # TODO: action selection by online net, evaluation by target net.
-                #   next_actions = self.q_net(next_states).argmax(dim=1, keepdim=True)
-                #   next_q_values = self.target_net(next_states).gather(1, next_actions).squeeze(1)
-                next_q_values = self.target_net(next_states).max(1)[0]
-                ########## END OF YOUR CODE (for Task 3) ##########
+                next_actions = self.q_net(next_states).argmax(dim=1, keepdim=True)
+                next_q_values = self.target_net(next_states).gather(1, next_actions).squeeze(1)
             else:
                 next_q_values = self.target_net(next_states).max(1)[0]
 
-            ########## YOUR CODE HERE (for Task 3: n-step return) ##########
-            # If you store n-step transitions, replace `gamma` with `gamma**n`
-            # and `rewards` with the accumulated n-step return G_t^{(n)}.
-            gamma_eff = self.gamma
-            ########## END OF YOUR CODE (for Task 3) ##########
-            target_q_values = rewards + gamma_eff * next_q_values * (1.0 - dones)
+            # Multi-step return
+            gamma_n = self.gamma ** self.n_step
+            target_q_values = returns + gamma_n * (1.0 - dones) * next_q_values
 
         td_errors = q_values - target_q_values
         loss = loss_fn(td_errors, weights, self.loss_fn_type, self.huber_beta)
@@ -317,9 +342,8 @@ class DQNAgent:
         nn.utils.clip_grad_norm_(self.q_net.parameters(), self.grad_clip)
         self.optimizer.step()
 
-        ########## YOUR CODE HERE (for Task 3: PER priority update) ##########
-        # TODO: self.memory.update_priorities(indices, td_errors.detach().cpu().numpy())
-        ########## END OF YOUR CODE (for Task 3) ##########
+        if isinstance(self.memory, PrioritizedReplayBuffer):
+            self.memory.update_priorities(indices, td_errors.detach().cpu().numpy())
 
         if self.train_count % self.target_update_frequency == 0:
             self.target_net.load_state_dict(self.q_net.state_dict())

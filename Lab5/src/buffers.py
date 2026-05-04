@@ -19,8 +19,7 @@ from typing import Tuple
 
 import numpy as np
 
-Transition = Tuple[np.ndarray, int, float, np.ndarray, bool]
-
+Transition = Tuple[np.ndarray, int, float, np.ndarray, bool] # (state, action, reward, next_state, done)
 
 # --------------------------------------------------------------------------
 # Uniform buffer (Task 1 / 2)
@@ -42,7 +41,7 @@ class UniformReplayBuffer:
             self.buffer.append(transition)
         else:
             self.buffer[self.pos] = transition
-            self.pos = (self.pos + 1) % self.capacity
+        self.pos = (self.pos + 1) % self.capacity
 
     def sample(self, batch_size: int):
         if len(self.buffer) == 0:
@@ -63,31 +62,26 @@ class UniformReplayBuffer:
 # Prioritized buffer (Task 3) -- name kept per spec
 # --------------------------------------------------------------------------
 class PrioritizedReplayBuffer:
-    """Proportional Prioritized Experience Replay (Schaul et al., 2016).
-
-    Stored priorities follow p_i = (|delta_i| + eps) ** alpha (raised to alpha
-    on insert) so sampling reduces to a categorical over priorities directly.
-
-    NOTE: Task 3 -- to be filled in later.
-    """
+    """Proportional Prioritized Experience Replay (Schaul et al., 2016)."""
 
     def __init__(
         self,
         capacity: int,
         alpha: float = 0.6,
         beta: float = 0.4,
-        beta_increment: float = 1e-6,
+        beta_increment: float = 2.5e-6,
         eps: float = 1e-6,
     ) -> None:
         self.capacity = capacity
-        self.alpha = alpha
-        self.beta = beta
-        self.beta_increment = beta_increment
-        self.eps = eps
-
         self.buffer: list[Transition] = []
-        self.priorities = np.zeros((capacity,), dtype=np.float32)
         self.pos = 0
+        self.priorities = np.zeros((capacity,), dtype=np.float32)
+
+        # Hyperparameters
+        self.alpha = alpha # prioritization exponent (0 = uniform, 1 = full prioritization)
+        self.beta = beta # importance-sampling exponent (0 = no correction, 1 = full correction)
+        self.beta_increment = beta_increment # amount to increment beta after each sampling step (anneal towards 1)
+        self.eps = eps # small constant to avoid zero priority        
 
     def __len__(self) -> int:
         return len(self.buffer)
@@ -105,39 +99,39 @@ class PrioritizedReplayBuffer:
           3. Store priority into self.priorities[self.pos].
           4. Advance self.pos modulo capacity.
         """
-        ########## YOUR CODE HERE (for Task 3) ##########
-
-        ########## END OF YOUR CODE (for Task 3) ##########
+        if error is None:
+            p = self.priorities.max() if len(self.buffer) > 0 else 1.0
+        else:
+            p = (abs(error) + self.eps) ** self.alpha
+        
+        if len(self.buffer) < self.capacity:
+            self.buffer.append(transition)
+        else:
+            self.buffer[self.pos] = transition
+        
+        # Update priority
+        self.priorities[self.pos] = p
+        self.pos = (self.pos + 1) % self.capacity
         return
 
     # ----------------------------------------------------------------------
     def sample(self, batch_size: int):
-        """Sample a batch with probability ∝ p_i, return IS-weights.
-
-        TODO (Task 3):
-          1. probs = self.priorities[:len(self)] / sum
-          2. indices = np.random.choice(len(self), batch_size, p=probs)
-          3. weights = (len(self) * probs[indices]) ** (-self.beta)
-             weights /= weights.max()       # normalize
-          4. self.beta = min(1.0, self.beta + self.beta_increment)
-          5. return states, actions, rewards, next_states, dones, indices, weights
-        """
-        ########## YOUR CODE HERE (for Task 3) ##########
-
-        ########## END OF YOUR CODE (for Task 3) ##########
-        return
+        """Sample a batch with probability ∝ p_i, return IS-weights. """
+        N = len(self.buffer)
+        probs = self.priorities[:N] / self.priorities[:N].sum()
+        indices = np.random.choice(N, batch_size, p=probs)
+        weights = (N * probs[indices]) ** (-self.beta)
+        weights /= weights.max() # Normalized
+        self.beta = min(1.0, self.beta + self.beta_increment)
+        batch = [self.buffer[i] for i in indices]
+        states, actions, rewards, next_states, dones = zip(*batch)
+        return states, actions, rewards, next_states, dones, indices, weights
 
     # ----------------------------------------------------------------------
     def update_priorities(self, indices, errors) -> None:
-        """Update priorities of sampled transitions after training.
-
-        TODO (Task 3):
-          For each (idx, err) pair:
-              self.priorities[idx] = (|err| + eps) ** alpha
-        """
-        ########## YOUR CODE HERE (for Task 3) ##########
-
-        ########## END OF YOUR CODE (for Task 3) ##########
+        """Update priorities of sampled transitions after training."""
+        for idx, err in zip(indices, errors):
+            self.priorities[idx] = (abs(err) + self.eps) ** self.alpha
         return
 
 

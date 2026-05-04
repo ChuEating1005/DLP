@@ -54,14 +54,23 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--replay-start-size", type=int, default=50_000)
     p.add_argument("--replay-buffer-type", type=str, default="uniform",
                    choices=["uniform", "prioritized"])
-    p.add_argument("--prioritized-alpha", type=float, default=0.6)
-    p.add_argument("--prioritized-beta", type=float, default=0.4)
+
+    # PER hyperparameters
+    p.add_argument("--per-alpha", type=float, default=0.6,
+                   help="(PER) prioritization exponent (0 = uniform, 1 = full).")
+    p.add_argument("--per-beta", type=float, default=0.4,
+                   help="(PER) initial IS-weight exponent; annealed toward 1.0.")
+    p.add_argument("--per-beta-increment", type=float, default=1e-6,
+                   help="(PER) per-sample increment to anneal beta toward 1.0.")
 
     p.add_argument("--target-update-frequency", type=int, default=1000)
     p.add_argument("--frame-stack", type=int, default=4)
 
+    # Double DQN
     p.add_argument("--double-dqn", action="store_true",
                    help="(Task 3) Enable Double DQN target.")
+    
+    # Multi-Step Return
     p.add_argument("--n-step", type=int, default=1,
                    help="(Task 3) n-step return (1 = vanilla).")
 
