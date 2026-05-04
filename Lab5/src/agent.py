@@ -65,9 +65,10 @@ class DQNAgent:
 
         input_shape = infer_input_shape(self.env, frame_stack=args.frame_stack, atari=self.atari)
 
-        self.q_net = DQN(self.num_actions, input_shape=input_shape).to(self.device)
+        self.dueling = args.dueling_dqn
+        self.q_net = DQN(self.num_actions, input_shape=input_shape, dueling=self.dueling).to(self.device)
         self.q_net.apply(init_weights)
-        self.target_net = DQN(self.num_actions, input_shape=input_shape).to(self.device)
+        self.target_net = DQN(self.num_actions, input_shape=input_shape, dueling=self.dueling).to(self.device)
         self.target_net.load_state_dict(self.q_net.state_dict())
         self.target_net.eval()
 
