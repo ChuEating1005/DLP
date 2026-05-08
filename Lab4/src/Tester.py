@@ -44,7 +44,7 @@ class Dataset_Dance(torchData):
         self.img_folder = []
         self.label_folder = []
         
-        data_num = len(glob('./Demo_Test/*'))
+        data_num = len(glob(os.path.join(root, 'test/test_img/*')))
         for i in range(data_num):
             self.img_folder.append(sorted(glob(os.path.join(root , f'test/test_img/{i}/*')), key=get_key))
             self.label_folder.append(sorted(glob(os.path.join(root , f'test/test_label/{i}/*')), key=get_key))
@@ -122,8 +122,35 @@ class Test_model(VAE_Model):
         decoded_frame_list = [img[0].cpu()]
         label_list = []
 
-        # TODO
-        raise NotImplementedError
+        # Autoregressive rollout:
+        #   - Start from the single seed frame img[0].
+        #   - For each of the 630 pose labels, encode the previous predicted
+        #     frame + next pose, sample z ~ N(0, I), decode the next frame.
+        prev = img[0]   # (1, 3, H, W)
+        for t in range(label.shape[0]):
+            cur_pose = label[t]
+
+            enc_prev = self.frame_transformation(prev)
+            enc_pose = self.label_transformation(cur_pose)
+
+            z = torch.randn(
+                prev.shape[0], self.args.N_dim,
+                enc_prev.shape[-2], enc_prev.shape[-1],
+                device=prev.device, dtype=enc_prev.dtype,
+            ) * 0.5
+
+            fused = self.Decoder_Fusion(enc_prev, enc_pose, z)
+            pred = self.Generator(fused)
+            pred = torch.clamp(pred, 0.0, 1.0)
+
+            decoded_frame_list.append(pred.cpu())
+            label_list.append(cur_pose.cpu())
+
+            prev = pred
+
+        # decoded_frame_list now has 1 (seed) + 630 frames; the fixed block
+        # below expects exactly 630, so drop the seed.
+        decoded_frame_list = decoded_frame_list[1:]
             
         
         # Please do not modify this part, it is used for visulization

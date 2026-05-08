@@ -24,12 +24,10 @@ class Generator(nn.Sequential):
             DepthConvBlock(input_nc//8, input_nc//8),
             nn.Conv2d(input_nc//8, 3, 1)
         )
-        
+
     def forward(self, input):
         return super().forward(input)
-    
-    
-    
+
 class RGB_Encoder(nn.Sequential):
     def __init__(self, in_chans, out_chans):
         super(RGB_Encoder, self).__init__(
@@ -41,14 +39,11 @@ class RGB_Encoder(nn.Sequential):
             DepthConvBlock(out_chans//2, out_chans//2),
             nn.Conv2d(out_chans//2, out_chans, 3, padding=1),
         )  
-        
+
     def forward(self, image):
         return super().forward(image)
-    
 
-    
-    
-    
+
 class Label_Encoder(nn.Sequential):
     def __init__(self, in_chans, out_chans, norm_layer=nn.BatchNorm2d):
         super(Label_Encoder, self).__init__(
@@ -58,11 +53,10 @@ class Label_Encoder(nn.Sequential):
             nn.LeakyReLU(True),
             ResidualBlock(in_ch=out_chans//2, out_ch=out_chans)
         )  
-        
+
     def forward(self, image):
         return super().forward(image)
-    
-    
+
 class Gaussian_Predictor(nn.Sequential):
     def __init__(self, in_chans=48, out_chans=96):
         super(Gaussian_Predictor, self).__init__(
@@ -74,20 +68,21 @@ class Gaussian_Predictor(nn.Sequential):
             nn.LeakyReLU(True),
             nn.Conv2d(out_chans, out_chans*2, kernel_size=1)
         )
-        
+
     def reparameterize(self, mu, logvar):
-        # TODO
-        raise NotImplementedError
+        sigma = torch.exp(logvar / 2)
+        eps = torch.randn_like(sigma) # eps ~ N(0, I)
+        z = mu + eps * sigma
+        return z
 
     def forward(self, img, label):
         feature = torch.cat([img, label], dim=1)
         parm = super().forward(feature)
         mu, logvar = torch.chunk(parm, 2, dim=1)
         z = self.reparameterize(mu, logvar)
-
         return z, mu, logvar
-    
-    
+
+
 class Decoder_Fusion(nn.Sequential):
     def __init__(self, in_chans=48, out_chans=96):
         super().__init__(
@@ -102,10 +97,7 @@ class Decoder_Fusion(nn.Sequential):
     def forward(self, img, label, parm):
         feature = torch.cat([img, label, parm], dim=1)
         return super().forward(feature)
-    
 
-    
-        
-    
+
 if __name__ == '__main__':
     pass
