@@ -1,0 +1,208 @@
+_wandb:
+    value:
+        cli_version: 0.26.1
+        code_path: code/Lab5/dqn.py
+        e:
+            jlxmhcvbc555t13xb9ow94r8db6x9zsn:
+                args:
+                    - --env-name
+                    - CartPole-v1
+                    - --wandb-project
+                    - dlp-lab5
+                    - --episodes
+                    - "1500"
+                    - --max-episode-steps
+                    - "500"
+                    - --batch-size
+                    - "64"
+                    - --lr
+                    - "1e-4"
+                    - --memory-size
+                    - "100000"
+                    - --replay-start-size
+                    - "5000"
+                    - --replay-buffer-type
+                    - uniform
+                    - --target-update-frequency
+                    - "1000"
+                    - --epsilon-start
+                    - "1.0"
+                    - --epsilon-scheduler
+                    - exponential
+                    - --epsilon-decay
+                    - "0.99995"
+                    - --epsilon-decay-steps
+                    - "60000"
+                    - --epsilon-min
+                    - "0.05"
+                    - --loss-fn-type
+                    - huber
+                    - --eval-interval
+                    - "10"
+                    - --eval-episodes
+                    - "20"
+                    - --early-stop-reward
+                    - "480"
+                    - --early-stop-patience
+                    - "3"
+                    - --checkpoint-interval
+                    - "100"
+                    - --seed
+                    - "42"
+                    - --wandb-run-name
+                    - CartPole-baseline-seed42
+                    - --save-dir
+                    - ./results/ablation/baseline/seed42
+                codePath: Lab5/dqn.py
+                codePathLocal: dqn.py
+                cpu_count: 64
+                cpu_count_logical: 128
+                cudaVersion: "13.0"
+                disk:
+                    /:
+                        total: "1919253741568"
+                        used: "149794050048"
+                email: itingchu1005@gmail.com
+                executable: /project3/chueating/DLP/Lab5/.venv/bin/python
+                git:
+                    commit: 88b7bbddb6dba365ccbf40da413340c9c4ae9a68
+                    remote: git@github.com:ChuEating1005/DLP.git
+                gpu: NVIDIA GeForce RTX 4090
+                gpu_count: 4
+                gpu_nvidia:
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-72379f23-7a0b-029d-b028-526c6e8a88d5
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-d86f0df1-5539-c5fc-0982-b9a5448eb468
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-fd7a502f-d29a-93fd-dde6-0685b113549f
+                    - architecture: Ada
+                      cudaCores: 16384
+                      memoryTotal: "25757220864"
+                      name: NVIDIA GeForce RTX 4090
+                      uuid: GPU-68676049-e319-1b1d-ad56-a61a5758e4f5
+                host: gpu10.cplab.cs.nycu.edu.tw
+                memory:
+                    total: "810205224960"
+                os: Linux-6.8.0-88-generic-x86_64-with-glibc2.39
+                program: /project3/chueating/DLP/Lab5/dqn.py
+                python: CPython 3.11.15
+                root: /project3/chueating/DLP/Lab5
+                startedAt: "2026-04-30T18:22:36.597162Z"
+                writerId: jlxmhcvbc555t13xb9ow94r8db6x9zsn
+        m:
+            - "1": global/env_step
+              "6":
+                - 3
+              "7": []
+            - "1": global/update_step
+              "6":
+                - 3
+              "7": []
+            - "2": rollout/*
+              "5": 1
+              "6":
+                - 1
+              "7": []
+            - "2": eval/*
+              "5": 1
+              "6":
+                - 1
+              "7": []
+            - "2": train/*
+              "5": 2
+              "6":
+                - 1
+              "7": []
+        python_version: 3.11.15
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 2
+                - 7
+                - 13
+                - 16
+            "4": 3.11.15
+            "5": 0.26.1
+            "8":
+                - 2
+            "12": 0.26.1
+            "13": linux-x86_64
+batch_size:
+    value: 64
+checkpoint_interval:
+    value: 100
+discount_factor:
+    value: 0.99
+double_dqn:
+    value: false
+early_stop_patience:
+    value: 3
+early_stop_reward:
+    value: 480
+env_name:
+    value: CartPole-v1
+episodes:
+    value: 1500
+epsilon_decay:
+    value: 0.99995
+epsilon_decay_steps:
+    value: 60000
+epsilon_min:
+    value: 0.05
+epsilon_scheduler:
+    value: exponential
+epsilon_start:
+    value: 1
+eval_episodes:
+    value: 20
+eval_interval:
+    value: 10
+eval_seed:
+    value: 10000
+frame_stack:
+    value: 4
+grad_clip:
+    value: 10
+loss_fn_type:
+    value: huber
+lr:
+    value: 0.0001
+max_episode_steps:
+    value: 500
+memory_size:
+    value: 100000
+n_step:
+    value: 1
+prioritized_alpha:
+    value: 0.6
+prioritized_beta:
+    value: 0.4
+replay_buffer_type:
+    value: uniform
+replay_start_size:
+    value: 5000
+save_dir:
+    value: ./results/ablation/baseline/seed42
+seed:
+    value: 42
+target_update_frequency:
+    value: 1000
+train_per_step:
+    value: 1
+wandb_project:
+    value: dlp-lab5
+wandb_run_name:
+    value: CartPole-baseline-seed42
