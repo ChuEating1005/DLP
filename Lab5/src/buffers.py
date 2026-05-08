@@ -89,15 +89,7 @@ class PrioritizedReplayBuffer:
     # ----------------------------------------------------------------------
     def add(self, transition: Transition, error: float | None = None) -> None:
         """Insert a transition with priority based on its TD error.
-
         New transitions get max priority (so they are sampled at least once).
-
-        TODO (Task 3):
-          1. Compute priority p = (|error| + eps) ** alpha if error given,
-             else use max(self.priorities) (or 1.0 if buffer is empty).
-          2. Append/overwrite at self.pos (circular).
-          3. Store priority into self.priorities[self.pos].
-          4. Advance self.pos modulo capacity.
         """
         if error is None:
             p = self.priorities.max() if len(self.buffer) > 0 else 1.0

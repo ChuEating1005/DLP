@@ -20,11 +20,12 @@ Mode = Literal["atari", "identity"]
 
 
 class Preprocessor:
-    def __init__(self, mode: Mode = "atari", frame_stack: int = 4) -> None:
+    def __init__(self, mode: Mode = "atari", frame_stack: int = 4, crop: bool = True) -> None:
         if mode not in ("atari", "identity"):
             raise ValueError(f"mode must be 'atari' or 'identity', got {mode!r}")
         self.mode = mode
         self.frame_stack = frame_stack
+        self.crop = crop
         self.frames: deque = deque(maxlen=frame_stack)
 
     # ---------- atari helpers ----------
@@ -50,7 +51,8 @@ class Preprocessor:
         if self.mode == "identity":
             return np.asarray(obs, dtype=np.float32)
         frame = self._to_gray(obs)
-        frame = self._to_play_region(frame)
+        if self.crop:
+            frame = self._to_play_region(frame)
         frame = self._resize(frame)
         self.frames = deque([frame.copy() for _ in range(self.frame_stack)],
                             maxlen=self.frame_stack)
@@ -60,7 +62,8 @@ class Preprocessor:
         if self.mode == "identity":
             return np.asarray(obs, dtype=np.float32)
         frame = self._to_gray(obs)
-        frame = self._to_play_region(frame)
+        if self.crop:
+            frame = self._to_play_region(frame)
         frame = self._resize(frame)
         self.frames.append(frame.copy())
         return np.stack(self.frames, axis=0)

@@ -66,11 +66,21 @@ class DQNAgent:
         input_shape = infer_input_shape(self.env, frame_stack=args.frame_stack, atari=self.atari)
 
         self.dueling = args.dueling_dqn
-        self.q_net = DQN(self.num_actions, input_shape=input_shape, dueling=self.dueling).to(self.device)
+        self.noisy = args.noisy_net
+        self.q_net = DQN(self.num_actions, input_shape=input_shape,
+                         dueling=self.dueling, noisy=self.noisy).to(self.device)
         self.q_net.apply(init_weights)
-        self.target_net = DQN(self.num_actions, input_shape=input_shape, dueling=self.dueling).to(self.device)
+        self.target_net = DQN(self.num_actions, input_shape=input_shape,
+                              dueling=self.dueling, noisy=self.noisy).to(self.device)
         self.target_net.load_state_dict(self.q_net.state_dict())
-        self.target_net.eval()
+        # Keep target net in train() mode iff noisy, so its NoisyLinear layers
+        # actually inject noise into the bootstrap target (Fortunato 2018,
+        # Rainbow). Plain DQN target stays in eval() since it has no
+        # train-only ops anyway, but eval() is the safer convention.
+        if self.noisy:
+            self.target_net.train()
+        else:
+            self.target_net.eval()
 
         self.optimizer = optim.Adam(self.q_net.parameters(), lr=args.lr)
 
@@ -84,12 +94,20 @@ class DQNAgent:
 
         self.batch_size = args.batch_size
         self.gamma = args.discount_factor
-        self.epsilon_start = args.epsilon_start
-        self.epsilon = args.epsilon_start
+        # NoisyNet replaces epsilon-greedy: zero out epsilon so wandb logs
+        # reflect the actual exploration policy (network noise, not random
+        # action sampling) and select_action's short-circuit is consistent.
+        if self.noisy:
+            self.epsilon_start = 0.0
+            self.epsilon = 0.0
+            self.epsilon_min = 0.0
+        else:
+            self.epsilon_start = args.epsilon_start
+            self.epsilon = args.epsilon_start
+            self.epsilon_min = args.epsilon_min
         self.epsilon_scheduler = args.epsilon_scheduler
         self.epsilon_decay = args.epsilon_decay
         self.epsilon_decay_steps = args.epsilon_decay_steps
-        self.epsilon_min = args.epsilon_min
         if self.epsilon_decay_steps <= 0:
             raise ValueError("epsilon_decay_steps must be positive")
         self.loss_fn_type = args.loss_fn_type
@@ -116,6 +134,12 @@ class DQNAgent:
         self.eval_seed = args.eval_seed
         self.early_stop_reward = args.early_stop_reward
         self.early_stop_patience = args.early_stop_patience
+
+        # env-step-triggered snapshots (e.g. spec-required 600k/1M/1.5M/2M/2.5M).
+        # Sorted ascending; popped front-to-back as env_count crosses each.
+        self.snapshot_env_steps = sorted(
+            int(s) for s in (args.snapshot_env_steps or []) if int(s) > 0
+        )
 
     # ------------------------------------------------------------------
     # Multi-step return helper functions
@@ -150,7 +174,9 @@ class DQNAgent:
     # Action selection
     # ------------------------------------------------------------------
     def select_action(self, state) -> int:
-        if random.random() < self.epsilon:
+        # NoisyNet: exploration is handled by noise in the network's head;
+        # bypass epsilon-greedy entirely and act greedily on the noisy Q.
+        if not self.noisy and random.random() < self.epsilon:
             return random.randint(0, self.num_actions - 1)
         state_tensor = to_tensor(state, self.device).unsqueeze(0)
         with torch.no_grad():
@@ -191,6 +217,14 @@ class DQNAgent:
                 total_reward += reward
                 self.env_count += 1
                 step_count += 1
+
+                # Save snapshot the first time env_count reaches/passes a
+                # milestone (filename uses the milestone, not env_count, so
+                # filenames stay stable across runs even if step counts skip).
+                while (self.snapshot_env_steps
+                       and self.env_count >= self.snapshot_env_steps[0]):
+                    milestone = self.snapshot_env_steps.pop(0)
+                    self._save(f"model_step{milestone}.pt")
 
                 if self.env_count % 1000 == 0:
                     print(f"[Collect] Ep:{ep} Step:{step_count} EnvSteps:{self.env_count} "
@@ -311,6 +345,12 @@ class DQNAgent:
             return
 
         self.train_count += 1
+
+        # Resample noise once per gradient step so online & target nets see
+        # the same epsilon within this update (Fortunato 2018 Alg. 1).
+        if self.noisy:
+            self.q_net.reset_noise()
+            self.target_net.reset_noise()
 
         states, actions, returns, next_states, dones, indices, weights = \
             self.memory.sample(self.batch_size)

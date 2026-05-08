@@ -74,6 +74,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--n-step", type=int, default=1,
                    help="(Task 3) n-step return (1 = vanilla).")
 
+    # Dueling DQN
+    p.add_argument("--dueling-dqn", action="store_true",
+                     help="(Task 3) Enable Dueling DQN architecture.")
+
+    # Noisy Networks
+    p.add_argument("--noisy-net", action="store_true",
+                   help="(Task 3) Enable NoisyLinear in head; replaces epsilon-greedy.")
+
     p.add_argument("--eval-interval", type=int, default=20,
                    help="Run a greedy eval episode every N training episodes.")
     p.add_argument("--eval-episodes", type=int, default=1)
@@ -84,6 +92,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--early-stop-patience", type=int, default=0,
                    help="Number of consecutive evals that must reach early-stop reward; 0 stops on the first passing eval.")
     p.add_argument("--checkpoint-interval", type=int, default=100)
+    p.add_argument("--snapshot-env-steps", type=int, nargs="*", default=[],
+                   help="env_step milestones at which to save model snapshots "
+                        "(e.g. --snapshot-env-steps 600000 1000000 1500000 2000000 2500000). "
+                        "Saved as model_step{N}.pt, fired the first time env_count >= N.")
 
     return p
 
