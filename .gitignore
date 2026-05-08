@@ -44,6 +44,9 @@ Thumbs.db
 *.synctex.gz
 *.bbl
 *.blg
+*.brf
+*.listing
+**/_minted-report/
 
 # Submission zips
 *.zip
@@ -82,3 +85,7 @@ Lab3/imga/
 
 # ===== Lab4 specific =====
 Lab4/dataset/
+
+# ===== Lab5 specific =====
+Lab5/results/
+Lab5/LAB5_111550093.mp4
