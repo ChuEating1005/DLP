@@ -20,6 +20,10 @@ env/
 *.swo
 *~
 
+# Opencode
+*.sisyphus
+AGENTS.md
+
 # OS
 .DS_Store
 Thumbs.db
@@ -46,6 +50,7 @@ Thumbs.db
 *.blg
 *.brf
 *.listing
+*.xdv
 **/_minted-report/
 
 # Submission zips
@@ -92,3 +97,5 @@ Lab5/LAB5_111550093.mp4
 
 # ===== Lab6 specific =====
 Lab6/data/
+Lab6/checkpoints/
+Lab6/outputs/
